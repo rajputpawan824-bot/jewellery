@@ -1,0 +1,14 @@
+{
+  "explorer.sortOrder": "type",
+  "explorer.fileNesting.enabled": false,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/logs": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/logs": true
+  },
+  // C:\Users\hp\Desktop is also a git repo (other projects). Show only this project's repo.
+  "git.openRepositoryInParentFolders": "never"
+}

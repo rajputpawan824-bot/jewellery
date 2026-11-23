@@ -1,0 +1,49 @@
+{
+  "name": "seokart",
+  "version": "1.0.0",
+  "description": "SEOKart is an all-in-one, AI-powered search engine optimization (SEO) application built specifically for e-commerce platforms like Shopify and BigCommerce.",
+  "keywords": [
+    "seokart"
+  ],
+  "license": "ISC",
+  "author": "Activant Solution Pvt Ltd",
+  "type": "commonjs",
+  "main": "server.js",
+  "_moduleAliases": {
+    "@root": ".",
+    "@config": "src/config",
+    "@models": "src/models",
+    "@middlewares": "src/middlewares",
+    "@modules": "src/modules",
+    "@utils": "src/utils"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "db:create": "sequelize-cli db:create",
+    "db:drop": "sequelize-cli db:drop",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo",
+    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
+    "db:seed": "sequelize-cli db:seed:all",
+    "db:seed:undo": "sequelize-cli db:seed:undo:all",
+    "model:generate": "sequelize-cli model:generate",
+    "migration:generate": "sequelize-cli migration:generate",
+    "seed:generate": "sequelize-cli seed:generate",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "joi": "^17.13.9",
+    "jsonwebtoken": "^9.0.3",
+    "module-alias": "^2.3.5",
+    "mysql2": "^3.24.6",
+    "sequelize": "^6.37.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "sequelize-cli": "^6.6.5"
+  }
+}

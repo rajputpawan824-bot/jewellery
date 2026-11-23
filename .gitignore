@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Postman collection (shared separately, not kept in git)
+postman/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / build
+dist/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Uploads & temp
+uploads/
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE / editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Optional package managers
+.yarn/
+.pnp.*

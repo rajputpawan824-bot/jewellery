@@ -1,0 +1,324 @@
+=====================================================================
+  L'ATELIER - JEWELLERY APP : API GUIDE
+  Last updated : 23 Nov 2026
+=====================================================================
+
+This file explains every ready API in simple words: what to send,
+what comes back, every message the user can see, and all time
+limits. It is updated whenever an API changes.
+
+Base URL (local)  : http://localhost:3000
+All requests      : POST with JSON body, header  Content-Type: application/json
+Country code      : Always +91 (India). Do NOT send it; the server adds it.
+Postman           : postman/LATELIER-Jewellery-API.postman_collection.json
+                    (import it in Postman, then right-click the collection -> Run)
+
+
+---------------------------------------------------------------------
+  HOW EVERY RESPONSE LOOKS
+---------------------------------------------------------------------
+
+Every API (success or error) always returns these 4 fields, in this order:
+
+Success:
+  {
+    "statusCode": 200,
+    "status": true,
+    "message": "Text you can show to the user",
+    "data": { ... }
+  }
+
+Error:
+  {
+    "statusCode": 422,
+    "status": false,
+    "message": "Text you can show to the user (toast / alert)",
+    "data": null,
+    "errors": { "field_name": "Text to show under that input box" }
+  }
+
+  - "statusCode" is always the same as the HTTP status code.
+  - "status" is true for success and false for any error.
+  - "message" is always ready to show to the user as it is.
+  - "data" has the result on success, and is always null on error.
+  - "errors" tells which input box has the problem. It is present
+    only when a specific field is wrong.
+
+Status codes used:
+  200  Success
+  201  Account created
+  400  Wrong / expired / used OTP, or the request is not valid JSON
+  401  Create New PIN session is not valid or has expired
+  403  Account blocked
+  404  Mobile number not registered, or the API URL does not exist
+  409  Mobile number or email already registered
+  413  Request too large
+  422  Something in the form is missing or wrong
+  429  Too many tries, wait and try again
+  500  Server problem ("Something went wrong on our side. Please try again later.")
+
+
+=====================================================================
+  1. CREATE ACCOUNT
+     POST /api/auth/register
+=====================================================================
+
+Send:
+  {
+    "full_name": "Priya Sharma",
+    "mobile": "9876543210",
+    "email": "priya@example.com",
+    "mpin": "4826",
+    "is_terms_accepted": true
+  }
+
+  - mpin must be sent as TEXT in quotes ("4826"), not as a number.
+  - is_terms_accepted must be true / false (not "true" in quotes).
+
+Success (201):
+  "Your account has been created successfully. Welcome to L'ATELIER!"
+  data.user   -> user details
+  data.tokens -> login tokens (the user is logged in straight away)
+
+Messages the user can see:
+
+  Full Name
+    - Please enter your full name.
+    - Full name must have at least 2 letters.
+    - Full name can be at most 150 characters.
+    - Full name can only contain letters, spaces, dots and hyphens.
+
+  Mobile Number
+    - Please enter your mobile number.
+    - Mobile number can only contain digits.
+    - Mobile number must be exactly 10 digits.
+    - Please enter a valid mobile number. It should start with 6, 7, 8 or 9.
+    - This mobile number is already registered. Please login instead.
+    (Spaces, dashes, a leading +91 or 0 are removed automatically,
+     so "+91 98765 43210" is also accepted.)
+
+  Email Address
+    - Please enter your email address.
+    - Please enter a valid email address, for example name@example.com.
+    - Email address is too long.
+    - This email address is already registered. Please use a different email or login.
+
+  Four Digit Pin (MPIN)
+    - Please set your 4 digit MPIN.
+    - MPIN must be exactly 4 digits.
+    - MPIN cannot be the same digit 4 times (like 1111). Please choose a stronger MPIN.
+    - MPIN must be sent as text, for example "4826".
+
+  Terms & Conditions checkbox
+    - Please accept the Terms & Conditions and Privacy Policy to create your account.
+    (The account is NOT created if the box is not ticked.)
+
+  Limit
+    - Too many accounts created from this network. Please try again after 60 minutes.
+      (more than 10 new accounts from one network in 1 hour)
+
+
+=====================================================================
+  2. LOGIN
+     POST /api/auth/login
+=====================================================================
+
+Login is done with an OTP sent to the registered mobile number.
+Only the mobile number is needed (no MPIN).
+
+Send:
+  {
+    "mobile": "9876543210"
+  }
+
+Success (200):
+  "We've sent a 6-digit OTP to +91 ******3210. It is valid for 1 minute 30 seconds."
+  data.mobile     -> "+91 ******3210"
+  data.otp_length -> 6
+  data.expires_in_seconds   -> 90
+  data.resend_after_seconds -> 30
+  data.otp        -> the OTP (TEMPORARY, see note below)
+
+Messages the user can see:
+  - Please enter your mobile number.
+  - Mobile number can only contain digits.
+  - Mobile number must be exactly 10 digits.
+  - Please enter a valid mobile number. It should start with 6, 7, 8 or 9.
+  - This mobile number is not registered with us. Please check the number or create a new account.
+  - Your account has been blocked. Please contact customer support for help.
+  - Please wait 25 seconds before requesting a new OTP.   (30 seconds between two OTPs)
+  - You have requested too many OTPs. Please try again after 60 minutes.   (5 login OTPs per hour)
+  - Too many login attempts. Please try again after 15 minutes.
+    (5 failed tries for the same number in 15 minutes)
+  - Too many OTP requests from this network. Please try again after 15 minutes.
+    (10 OTP requests from one network in 15 minutes)
+
+TEMPORARY: the SMS service is not connected yet, so the OTP is only
+returned in data.otp. Once SMS is connected the OTP will come by SMS.
+The "verify login OTP" step (which logs the user in and gives the
+login tokens) is NOT ready yet.
+
+
+=====================================================================
+  3. FORGOT PIN - SEND OTP          (Forgot PIN screen, "SEND OTP")
+     POST /api/auth/forgot-mpin/send-otp
+=====================================================================
+
+Send:
+  { "mobile": "9876543210" }
+
+Success (200):
+  "We've sent a 6-digit OTP to +91 ******3210. It is valid for 1 minute 30 seconds."
+  data.mobile               -> "+91 ******3210" (show on the Verify OTP screen)
+  data.otp_length           -> 6
+  data.expires_in_seconds   -> 90   (OTP expiry countdown)
+  data.resend_after_seconds -> 30   ("Resend OTP in 00:30" timer)
+
+Messages the user can see:
+  - Please enter your mobile number.
+  - Mobile number must be exactly 10 digits.
+  - This mobile number is not registered with us. Please check the number or create a new account.
+  - Your account has been blocked. Please contact customer support for help.
+  - Please wait 25 seconds before requesting a new OTP.   (number = seconds left)
+  - You have requested too many OTPs. Please try again after an hour.
+  - Too many OTP requests from this network. Please try again after 15 minutes.
+
+TESTING ONLY: until the SMS service is connected, the OTP is also
+returned in data.otp. This field disappears on the live server.
+
+
+=====================================================================
+  4. FORGOT PIN - RESEND OTP        (Verify OTP screen, "Resend Code")
+     POST /api/auth/forgot-mpin/resend-otp
+=====================================================================
+
+Send:
+  { "mobile": "9876543210" }
+
+Success (200):
+  "A new OTP has been sent to +91 ******3210. It is valid for 1 minute 30 seconds.
+   Your previous OTP will no longer work."
+  (same data as SEND OTP)
+
+Messages the user can see:
+  - All messages of SEND OTP, plus:
+  - No OTP has been sent to this number yet. Please request an OTP first.
+
+Note: after a resend, ONLY the newest OTP works. The old one is
+rejected as incorrect.
+
+
+=====================================================================
+  5. FORGOT PIN - VERIFY OTP        (Verify OTP screen, "VERIFY")
+     POST /api/auth/forgot-mpin/verify-otp
+=====================================================================
+
+Send (join the 6 boxes into one text):
+  {
+    "mobile": "9876543210",
+    "otp": "048213"
+  }
+
+Success (200):
+  "OTP verified successfully. You can now set your new MPIN."
+  data.reset_token                    -> send this to the "Create New PIN" step (section 6)
+  data.reset_token_expires_in_seconds -> 600 (the new MPIN must be set within 10 minutes)
+
+Messages the user can see:
+  - Please enter the 6 digit OTP sent to your mobile number.
+  - Please enter all 6 digits of the OTP.
+  - OTP can only contain digits.
+  - The OTP you entered is incorrect. You have 4 attempts left.   (counts down)
+  - You have entered a wrong OTP too many times. Please tap "Resend Code" to get a new OTP.
+  - This OTP has expired. Please tap "Resend Code" to get a new one.
+  - This OTP has already been used. Please tap "Resend Code" to get a new OTP.
+  - No OTP has been sent to this number yet. Please request an OTP first.
+
+
+=====================================================================
+  6. FORGOT PIN - CREATE NEW PIN    (Create New PIN screen, "UPDATE PIN")
+     POST /api/auth/forgot-mpin/reset-mpin
+=====================================================================
+
+Send:
+  {
+    "reset_token": "<reset_token from Verify OTP>",
+    "new_mpin": "5937",
+    "confirm_mpin": "5937"
+  }
+
+  - new_mpin and confirm_mpin must be sent as TEXT in quotes.
+  - The reset_token works for 10 minutes and only ONE time.
+
+Success (200):
+  "Your MPIN has been updated successfully. Please sign in again."
+  After this the user is logged out on every device and must sign in again
+  (the "SIGN IN" button).
+
+Messages the user can see:
+
+  New PIN
+    - Please enter your new 4 digit MPIN.
+    - MPIN must be exactly 4 digits.
+    - MPIN cannot be the same digit 4 times (like 1111). Please choose a stronger MPIN.
+    - Your new MPIN cannot be the same as your old MPIN. Please choose a different MPIN.
+
+  Confirm PIN
+    - Please confirm your new MPIN.
+    - New PIN and Confirm PIN do not match. Please enter the same MPIN in both.
+
+  Session (reset_token)
+    - Your session has expired. Please verify the OTP again to set a new MPIN.  (token not sent)
+    - Your time to set a new MPIN has run out. Please verify the OTP again.     (after 10 minutes)
+    - This request is not valid. Please start Forgot PIN again.                  (wrong token)
+    - Your MPIN has already been changed with this request. Please start Forgot PIN again if needed.
+
+  Account
+    - This account could not be found. Please create a new account.
+    - Your account has been blocked. Please contact customer support for help.
+
+
+=====================================================================
+  ALL TIME LIMITS AT A GLANCE
+=====================================================================
+
+  What                               Limit
+  ---------------------------------  ----------------------------------------
+  OTP valid for                      1 minute 30 seconds
+  Wait before Resend Code            30 seconds
+  OTPs per mobile number             5 in 1 hour (login and forgot PIN counted separately)
+  Wrong tries per OTP                5 (then a new OTP is needed)
+  OTP requests per network           10 in 15 minutes (login + forgot PIN together)
+  Time to set new MPIN after OTP     10 minutes (the reset_token works only once)
+  Failed login tries                 5 per mobile number in 15 minutes
+  New accounts per network           10 in 1 hour (only successful sign-ups count)
+  All APIs together                  100 requests per network in 15 minutes
+  Login session (access token)       15 minutes
+  Stay logged in (refresh token)     7 days
+
+When a limit is reached the API returns status 429 and the message
+tells the user how long to wait. The "Retry-After" header also gives
+the seconds to wait for the OTP 30 second gap.
+
+
+=====================================================================
+  CHANGE LOG
+=====================================================================
+
+  23 Nov 2026
+    - Create Account and Login APIs (mobile + 4 digit MPIN)
+    - Terms & Conditions acceptance saved with the account
+    - Forgot PIN: Send OTP, Resend OTP, Verify OTP
+    - OTP validity set to 1 minute 30 seconds
+    - All limits and timings are now kept in one settings file on the
+      server, so they can be changed quickly. Nothing changed for the app.
+    - Login changed: only the mobile number is sent; an OTP is sent to it
+      (returned in the response for now). MPIN is no longer used to login.
+    - Forgot PIN: Create New PIN API added (new PIN + confirm PIN). After
+      the PIN changes, the user is logged out on all devices.
+    - Every response now has the same 4 fields: statusCode, status,
+      message, data ("success" is replaced by "status").
+    - Clearer messages for unknown URLs, invalid JSON and server errors.
+    - One common OTP check for every flow. Login OTP is now also valid for
+      1 minute 30 seconds, with the same 30 second resend gap and 5 wrong
+      tries. A login OTP cannot be used for Forgot PIN (and the other way).
